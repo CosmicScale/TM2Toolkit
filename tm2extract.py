@@ -40,7 +40,7 @@ def deswizzle_palette_256(pal):
         )
     return result
 
-def tm2_to_png(tm2_path, png_path, respect_alpha=False):
+def tm2_to_png(tm2_path, png_path, flatten_alpha=False):
     try:
         with open(tm2_path, "rb") as f:
 
@@ -70,40 +70,40 @@ def tm2_to_png(tm2_path, png_path, respect_alpha=False):
     palette = [rgba for rgba in struct.iter_unpack("<BBBB", palette_data)]
     palette = deswizzle_palette_256(palette)
 
-    if respect_alpha:
+    if flatten_alpha:
+        flat_palette = [c for rgba in palette for c in rgba[:3]]
+        img = Image.frombytes("P", (width, height), image_data)
+        img.putpalette(flat_palette[:768])
+    else:
         img = Image.frombytes("P", (width, height), image_data)
         flat_palette = [c for rgba in palette for c in rgba[:3]]
         img.putpalette(flat_palette[:768])
         alpha = Image.new("L", (width, height))
-        alpha.putdata([palette[p][3] for p in img.tobytes()])
+        alpha.putdata([min(255, palette[p][3] * 2) for p in img.tobytes()])
         img = img.convert("RGBA")
         img.putalpha(alpha)
-    else:
-        flat_palette = [c for rgba in palette for c in rgba[:3]]
-        img = Image.frombytes("P", (width, height), image_data)
-        img.putpalette(flat_palette[:768])
 
     img.save(png_path)
-    print(f"Extracted {width}x{height} image to {png_path} (alpha={'enabled' if respect_alpha else 'ignored'})")
+    print(f"Extracted {width}x{height} image to {png_path} (alpha={'ignored' if flatten_alpha else 'enabled'})")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or len(sys.argv) > 3:
-        print(f"Usage: {sys.argv[0]} [-a|--alpha] <input_file.tm2>")
+        print(f"Usage: {sys.argv[0]} [-f|--flatten] <input_file.tm2>")
         sys.exit(1)
 
-    respect_alpha = False
+    flatten_alpha = False
     input_file = None
 
     # Parse arguments
     if len(sys.argv) == 2:
         input_file = sys.argv[1]
     elif len(sys.argv) == 3:
-        if sys.argv[1] in ("--alpha", "-a"):
-            respect_alpha = True
+        if sys.argv[1] in ("--flatten", "-f"):
+            flatten_alpha = True
             input_file = sys.argv[2]
         else:
             print(f"Unknown option: {sys.argv[1]}")
-            print(f"Usage: {sys.argv[0]} [-a|--alpha] <input_file.tm2>")
+            print(f"Usage: {sys.argv[0]} [-f|--flatten] <input_file.tm2>")
             sys.exit(1)
 
     # Check if input file exists and is readable
@@ -115,4 +115,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     output_file = os.path.splitext(os.path.basename(input_file))[0] + ".png"
-    tm2_to_png(input_file, output_file, respect_alpha)
+    tm2_to_png(input_file, output_file, flatten_alpha)

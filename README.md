@@ -6,18 +6,10 @@ Extracts images from PlayStation 2 TIM2 format `.tm2` textures and saves them as
 
 Usage:
 ```
-tm2extract.py [-a|--alpha] <input_file.tm2>
+tm2extract.py [-f|--flatten] <input_file.tm2>
 ```
-- `--alpha` or `-a`: preserves the alpha channel in the exported PNG
-- Without this flag, the PNG is exported without an alpha channel
-
-## psm2tm2.py
-Extracts PlayStation 2 TIM2 format `.tm2` textures from PS2S format `.psm` video containers and saves them to the current working directory.
-
-Usage:
-```
-psm2tm2.py <input_file.psm>
-```
+- `--flatten` or `-f`: removes the alpha channel in the exported PNG
+- Without this flag, the PNG is exported with the alpha channel preserved
 
 ## tm2create.py
 Creates TIM2 format `.tm2` textures from an image and saves them to the current working directory. Max resolution 256x256.

@@ -100,45 +100,46 @@ def apply_palette_alpha(palette, alpha_value=128):
 # PNG to TIM2
 # ------------------------------
 def png_to_tm2(png_path):
-    # Check if file exists and is readable
     if not os.path.isfile(png_path):
         print(f"Error: Input file '{png_path}' does not exist or is not a file.")
         sys.exit(1)
     if not os.access(png_path, os.R_OK):
         print(f"Error: Input file '{png_path}' cannot be read (permission denied?).")
         sys.exit(1)
-        
-    # Load image (do not resize)
+
+    # Load image with alpha
     with Image.open(png_path) as img:
-        img = img.convert("RGB")
+        img = img.convert("RGBA")
         width, height = img.size
 
-        # Quantize to 256 colors
-        pal_img = img.quantize(colors=256,
-                               method=Image.MEDIANCUT,
-                               dither=Image.FLOYDSTEINBERG)
+        # Quantize RGBA image using a valid method for alpha
+        pal_img = img.quantize(colors=256, method=2, dither=Image.FLOYDSTEINBERG)  # FASTOCTREE
 
         # Extract RGB palette
         raw_palette = pal_img.getpalette()[:768]
-        palette_rgb = [
-            (raw_palette[i], raw_palette[i+1], raw_palette[i+2])
-            for i in range(0, len(raw_palette), 3)
-        ]
+        palette_rgb = [(raw_palette[i], raw_palette[i+1], raw_palette[i+2])
+                       for i in range(0, len(raw_palette), 3)]
 
+        # Get image indices
         image_indices = bytearray(pal_img.getdata())
+
+        # Map palette index → alpha (halve original)
+        pixels = list(img.getdata())
+        palette_rgba = []
+        for i in range(256):
+            try:
+                idx = image_indices.index(i)
+                a = pixels[idx][3] // 2  # halve alpha
+            except ValueError:
+                a = 0
+            palette_rgba.append((*palette_rgb[i], a))
 
     IMAGE_SIZE = len(image_indices)
 
-    # Swizzle palette and add alpha
-    swizzled_rgba = apply_palette_alpha(
-        swizzle_palette_256(palette_rgb),
-        alpha_value=128
-    )
+    # Swizzle palette
+    swizzled_rgba = swizzle_palette_256(palette_rgba)
 
-    palette_bytes = b''.join(
-        struct.pack("<BBBB", r, g, b, a)
-        for r, g, b, a in swizzled_rgba
-    )
+    palette_bytes = b''.join(struct.pack("<BBBB", r, g, b, a) for r, g, b, a in swizzled_rgba)
 
     # Build headers
     file_header = build_tim2_file_header()
@@ -152,10 +153,9 @@ def png_to_tm2(png_path):
     # Combine all parts
     tim2_data = file_header + picture_header + image_indices + palette_bytes
 
-    # Output filename in current directory with .tm2 extension
+    # Save TM2
     base_name = os.path.splitext(os.path.basename(png_path))[0]
     output_tm2_path = os.path.join(os.getcwd(), base_name + ".tm2")
-
     with open(output_tm2_path, "wb") as f:
         f.write(tim2_data)
 
