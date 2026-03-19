@@ -112,8 +112,21 @@ def png_to_tm2(png_path):
         img = img.convert("RGBA")
         width, height = img.size
 
-        # Quantize RGBA image using a valid method for alpha
-        pal_img = img.quantize(colors=256, method=2, dither=Image.FLOYDSTEINBERG)  # FASTOCTREE
+        # Separate RGB for palette generation
+        rgb_img = img.convert("RGB")
+
+        # Build palette using MEDIANCUT
+        pal_base = rgb_img.quantize(
+            colors=256,
+            method=Image.MEDIANCUT,
+            dither=Image.FLOYDSTEINBERG
+        )
+
+        # Apply palette to image
+        pal_img = rgb_img.quantize(
+            palette=pal_base,
+            dither=Image.FLOYDSTEINBERG
+        )
 
         # Extract RGB palette
         raw_palette = pal_img.getpalette()[:768]
