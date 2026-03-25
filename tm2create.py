@@ -99,7 +99,7 @@ def apply_palette_alpha(palette, alpha_value=128):
 # ------------------------------
 # PNG to TIM2
 # ------------------------------
-def png_to_tm2(png_path):
+def png_to_tm2(png_path, use_fastoctree=False):
     if not os.path.isfile(png_path):
         print(f"Error: Input file '{png_path}' does not exist or is not a file.")
         sys.exit(1)
@@ -115,18 +115,11 @@ def png_to_tm2(png_path):
         # Separate RGB for palette generation
         rgb_img = img.convert("RGB")
 
-        # Build palette using MEDIANCUT
-        pal_base = rgb_img.quantize(
-            colors=256,
-            method=Image.MEDIANCUT,
-            dither=Image.FLOYDSTEINBERG
-        )
-
-        # Apply palette to image
-        pal_img = rgb_img.quantize(
-            palette=pal_base,
-            dither=Image.FLOYDSTEINBERG
-        )
+        if use_fastoctree:
+            pal_img = rgb_img.quantize(colors=256, method=2, dither=Image.FLOYDSTEINBERG)
+        else:
+            pal_base = rgb_img.quantize(colors=256, method=Image.MEDIANCUT, dither=Image.FLOYDSTEINBERG)
+            pal_img = rgb_img.quantize(palette=pal_base, dither=Image.FLOYDSTEINBERG)
 
         # Extract RGB palette
         raw_palette = pal_img.getpalette()[:768]
@@ -178,8 +171,10 @@ def png_to_tm2(png_path):
 # Main entry
 # ------------------------------
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <input.png>")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print(f"Usage: {sys.argv[0]} <input.png> [-f]")
         sys.exit(1)
 
-    png_to_tm2(sys.argv[1])
+    input_file = sys.argv[1]
+    use_fastoctree = len(sys.argv) == 3 and sys.argv[2] == "-f"
+    png_to_tm2(input_file, use_fastoctree)
