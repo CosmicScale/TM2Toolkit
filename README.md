@@ -16,7 +16,7 @@ Creates TIM2 format `.tm2` textures from an image and saves them to the current 
 
 Usage:
 ```
-tm2create.py <input.png> [-f]
+tm2create.py [-f] <input.png>
 ```
 - Max recommended resolution 256x256
 - Some images with very few colors can cause MEDIANCUT to fail, in which case, FASTOCTREE should be used via the -f flag.

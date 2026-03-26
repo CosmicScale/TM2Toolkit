@@ -172,9 +172,18 @@ def png_to_tm2(png_path, use_fastoctree=False):
 # ------------------------------
 if __name__ == "__main__":
     if len(sys.argv) < 2 or len(sys.argv) > 3:
-        print(f"Usage: {sys.argv[0]} <input.png> [-f]")
+        print(f"Usage: {sys.argv[0]} [-f] <input.png>")
         sys.exit(1)
 
-    input_file = sys.argv[1]
-    use_fastoctree = len(sys.argv) == 3 and sys.argv[2] == "-f"
+    if len(sys.argv) == 3:
+        if sys.argv[1] == "-f":
+            use_fastoctree = True
+            input_file = sys.argv[2]
+        else:
+            print(f"Usage: {sys.argv[0]} [-f] <input.png>")
+            sys.exit(1)
+    else:
+        use_fastoctree = False
+        input_file = sys.argv[1]
+
     png_to_tm2(input_file, use_fastoctree)
