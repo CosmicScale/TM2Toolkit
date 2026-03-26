@@ -6,7 +6,7 @@ Extracts images from PlayStation 2 TIM2 format `.tm2` textures and saves them as
 
 Usage:
 ```
-tm2extract.py [-f|--flatten] <input_file.tm2>
+tm2extract.py [-f|--flatten] <input.tm2>
 ```
 - `--flatten` or `-f`: removes the alpha channel in the exported PNG
 - Without this flag, the PNG is exported with the alpha channel preserved
@@ -18,7 +18,6 @@ Usage:
 ```
 tm2create.py [-f] <input.png>
 ```
-- Max recommended resolution 256x256
 - Some images with very few colors can cause MEDIANCUT to fail, in which case, FASTOCTREE should be used via the -f flag.
 
 ## Credits
