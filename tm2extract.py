@@ -40,6 +40,15 @@ def deswizzle_palette_256(pal):
         )
     return result
 
+def unpack_4bit(data):
+    pixels = bytearray(len(data) * 2)
+    i = 0
+    for byte in data:
+        pixels[i] = byte & 0x0F
+        pixels[i + 1] = byte >> 4
+        i += 2
+    return bytes(pixels)
+
 def tm2_to_png(tm2_path, png_path, flatten_alpha=False):
     try:
         with open(tm2_path, "rb") as f:
@@ -66,23 +75,55 @@ def tm2_to_png(tm2_path, png_path, flatten_alpha=False):
         print(f"Error: Could not read input file '{tm2_path}': {e}")
         sys.exit(1)
 
-    # Decode palette (RGBA)
-    palette = [rgba for rgba in struct.iter_unpack("<BBBB", palette_data)]
-    palette = deswizzle_palette_256(palette)
+    # Determine format
+    print(f"[DEBUG] Texture info: width={width}, height={height}, depth={depth}, palette_size={len(palette_data)}, image_size={len(image_data)}")
+    if depth == 4:
+        image_data = unpack_4bit(image_data)
+        mode = "P"
+        print("[DEBUG] Using 4-bit indexed mode")
 
-    if flatten_alpha:
-        flat_palette = [c for rgba in palette for c in rgba[:3]]
-        img = Image.frombytes("P", (width, height), image_data)
-        img.putpalette(flat_palette[:768])
+    elif depth == 5:
+        mode = "P"
+        print("[DEBUG] Using 8-bit indexed mode")
+
+    elif depth == 3:
+        mode = "RGBA"
+        print("[DEBUG] Using 32-bit RGBA mode")
+
     else:
-        img = Image.frombytes("P", (width, height), image_data)
+        print(f"[DEBUG] Unsupported depth: {depth}")
+        raise NotImplementedError(f"Unsupported depth: {depth}")
+
+    # Create image
+    img = Image.frombytes(mode, (width, height), image_data)
+
+    # Flatten alpha for RGBA images if requested
+    if mode == "RGBA" and flatten_alpha:
+        img = img.convert("RGB")
+
+    if mode == "RGBA" and not flatten_alpha:
+        r, g, b, a = img.split()
+        # PS2 4-bit alpha scaling (0–15 → 0–255)
+        a = a.point(lambda v: min(255, v * 17))
+        img = Image.merge("RGBA", (r, g, b, a))
+
+    # Handle paletted images
+    if mode == "P":
+        palette = [rgba for rgba in struct.iter_unpack("<BBBB", palette_data)]
+        palette = deswizzle_palette_256(palette)
+
         flat_palette = [c for rgba in palette for c in rgba[:3]]
         img.putpalette(flat_palette[:768])
-        alpha = Image.new("L", (width, height))
-        alpha.putdata([min(255, palette[p][3] * 2) for p in img.tobytes()])
-        img = img.convert("RGBA")
-        img.putalpha(alpha)
 
+        if not flatten_alpha:
+            alpha = Image.new("L", (width, height))
+            alpha.putdata([min(255, palette[p][3] * 2) for p in img.tobytes()])
+            img = img.convert("RGBA")
+            img.putalpha(alpha)
+        else:
+            img = img.convert("RGB")
+
+    # Save (THIS MUST BE OUTSIDE the palette block)
     img.save(png_path)
     print(f"Extracted {width}x{height} image to {png_path} (alpha={'ignored' if flatten_alpha else 'enabled'})")
 
