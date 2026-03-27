@@ -76,19 +76,19 @@ def tm2_to_png(tm2_path, png_path, flatten_alpha=False):
         sys.exit(1)
 
     # Determine format
-    print(f"[DEBUG] Texture info: width={width}, height={height}, depth={depth}, palette_size={len(palette_data)}, image_size={len(image_data)}")
+    print(f"Texture info: width={width}, height={height}, depth={depth}, palette_size={len(palette_data)}, image_size={len(image_data)}")
     if depth == 4:
         image_data = unpack_4bit(image_data)
         mode = "P"
-        print("[DEBUG] Using 4-bit indexed mode")
+        print("4-bit indexed")
 
     elif depth == 5:
         mode = "P"
-        print("[DEBUG] Using 8-bit indexed mode")
+        print("8-bit indexed")
 
     elif depth == 3:
         mode = "RGBA"
-        print("[DEBUG] Using 32-bit RGBA mode")
+        print("32-bit RGBA")
 
     else:
         print(f"[DEBUG] Unsupported depth: {depth}")
@@ -103,8 +103,7 @@ def tm2_to_png(tm2_path, png_path, flatten_alpha=False):
 
     if mode == "RGBA" and not flatten_alpha:
         r, g, b, a = img.split()
-        # PS2 4-bit alpha scaling (0–15 → 0–255)
-        a = a.point(lambda v: min(255, v * 17))
+        a = a.point(lambda v: min(255, v * 2))
         img = Image.merge("RGBA", (r, g, b, a))
 
     # Handle paletted images
